@@ -26,6 +26,7 @@ def mode_norm(inputs, _lambda, _k, _eps=1e-7):
 
     outputs = []
     for k in range(_k):
+        # TODO: x * gnk here!
         norm_x = tf.nn.batch_normalization(x, mean=running_mean[k], variance=running_variance[k],
                                            offset=beta, scale=alpha, variance_epsilon=_eps)
         outputs.append(norm_x)

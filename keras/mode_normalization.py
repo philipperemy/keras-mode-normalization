@@ -1,15 +1,17 @@
 import keras.backend as K
 from keras import initializers, regularizers, constraints
 from keras.engine import Layer, InputSpec
+from keras.layers import Dense, Flatten
 from keras.legacy import interfaces
 
 
 class ModeNormalization(Layer):
-    """Batch normalization layer (Ioffe and Szegedy, 2014).
+    """Mode Normalization layer.
 
     Normalize the activations of the previous layer at each batch,
     i.e. applies a transformation that maintains the mean activation
-    close to 0 and the activation standard deviation close to 1.
+    close to 0 and the activation standard deviation close to 1 for
+    different modes.
 
     # Arguments
         axis: Integer, the axis that should be normalized
@@ -17,6 +19,7 @@ class ModeNormalization(Layer):
             For instance, after a `Conv2D` layer with
             `data_format="channels_first"`,
             set `axis=1` in `BatchNormalization`.
+        k: Integer, the number of modes of the normalization.
         momentum: Momentum for the moving mean and the moving variance.
         epsilon: Small float added to variance to avoid dividing by zero.
         center: If True, add offset of `beta` to normalized tensor.
@@ -44,13 +47,13 @@ class ModeNormalization(Layer):
         Same shape as input.
 
     # References
-        - [Batch Normalization: Accelerating Deep Network Training by
-           Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167)
+        - [Mode Normalization]
     """
 
     @interfaces.legacy_batchnorm_support
     def __init__(self,
                  axis=-1,
+                 k=2,
                  momentum=0.99,
                  epsilon=1e-3,
                  center=True,
@@ -67,6 +70,7 @@ class ModeNormalization(Layer):
         super(ModeNormalization, self).__init__(**kwargs)
         self.supports_masking = True
         self.axis = axis
+        self.k = k
         self.momentum = momentum
         self.epsilon = epsilon
         self.center = center
@@ -90,7 +94,7 @@ class ModeNormalization(Layer):
                              str(input_shape) + '.')
         self.input_spec = InputSpec(ndim=len(input_shape),
                                     axes={self.axis: dim})
-        shape = (dim,)
+        shape = [self.k] + list(input_shape[1:])
 
         if self.scale:
             self.gamma = self.add_weight(shape=shape,
@@ -128,9 +132,17 @@ class ModeNormalization(Layer):
         del reduction_axes[self.axis]
         broadcast_shape = [1] * len(input_shape)
         broadcast_shape[self.axis] = input_shape[self.axis]
-
+        # expert_assignments = slim.fully_connected(x, num_outputs=_k, activation_fn=tf.nn.softmax, scope='mode_norm')
         # Determines whether broadcasting is needed.
         needs_broadcasting = (sorted(reduction_axes) != list(range(ndim))[:-1])
+        # register this Dense layer somehow.
+        gates = Dense(self.k, activation='softmax')(Flatten()(inputs))
+
+        gates = K.reshape(gates, (-1, self.k, 1, 1, 1))
+
+        mean = K.mean(K.stack([gates[:, k] * inputs for k in range(self.k)], axis=1), axis=0)
+        variance = K.mean(K.stack([gates[:, k] * inputs ** 2 for k in range(self.k)], axis=1), axis=0)
+        variance -= mean ** 2
 
         def normalize_inference():
             if needs_broadcasting:
@@ -167,13 +179,36 @@ class ModeNormalization(Layer):
                     epsilon=self.epsilon)
 
         # If the learning phase is *static* and set to inference:
-        if training in {0, False}:
-            return normalize_inference()
+        # if training in {0, False}:
+        #     return normalize_inference()
 
+        """
+        outputs = []
+        for k in range(_k):
+            norm_x = tf.nn.batch_normalization(x, mean=running_mean[k], variance=running_variance[k],
+                                               offset=beta, scale=alpha, variance_epsilon=_eps)
+            outputs.append(norm_x)
+        output = tf.add_n(outputs)
+        output = tf.reshape(output, input_shape)
+        """
+
+        # Applies batch normalization on x given mean, var, beta and gamma.
+        normed_training_list = []
+        for k in range(self.k):
+            # nt = K.batch_normalization(inputs * gates[:, k],
+            #                            K.reshape(mean[k], [1, 12, 12, 64]),
+            #                            K.reshape(variance[k], [1, 12, 12, 64]),
+            #                            self.beta,
+            #                            self.gamma,
+            #                            axis=self.axis,
+            #                            epsilon=self.epsilon)
+            nt = self.gamma[k] * (inputs * gates[:, k] - mean[k]) / (variance[k] + self.epsilon) + self.beta[k]
+            normed_training_list.append(nt)
+        normed_training = K.sum(K.stack(normed_training_list, axis=0), axis=0)
         # If the learning is either dynamic, or set to training:
-        normed_training, mean, variance = K.normalize_batch_in_training(
-            inputs, self.gamma, self.beta, reduction_axes,
-            epsilon=self.epsilon)
+        # normed_training, mean, variance = K.normalize_batch_in_training(
+        #     inputs, self.gamma, self.beta, reduction_axes,
+        #     epsilon=self.epsilon)
 
         if K.backend() != 'cntk':
             sample_size = K.prod([K.shape(inputs)[axis]
@@ -193,7 +228,7 @@ class ModeNormalization(Layer):
 
         # Pick the normalized form corresponding to the training phase.
         return K.in_train_phase(normed_training,
-                                normalize_inference,
+                                normed_training,
                                 training=training)
 
     def get_config(self):

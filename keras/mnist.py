@@ -52,7 +52,7 @@ model.add(Conv2D(32, kernel_size=(3, 3),
                  input_shape=input_shape))
 model.add(Conv2D(64, (3, 3), activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(BatchNormalization())
+# model.add(BatchNormalization())
 model.add(ModeNormalization())
 model.add(Dropout(0.25))
 model.add(Flatten())
@@ -63,6 +63,8 @@ model.add(Dense(num_classes, activation='softmax'))
 model.compile(loss=keras.losses.categorical_crossentropy,
               optimizer=keras.optimizers.Adadelta(),
               metrics=['accuracy'])
+
+model.predict(x_train[0:10])
 
 model.fit(x_train, y_train,
           batch_size=batch_size,

@@ -1,7 +1,7 @@
-import os
 import tensorflow as tf
 import tensorflow.examples.tutorials.mnist.input_data as input_data
 from glob import glob
+
 import config as cfg
 from lenet import LeNet
 
