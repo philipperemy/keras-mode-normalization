@@ -4,6 +4,7 @@ import tensorflow.contrib.slim as slim
 import config as cfg
 from mode_norm import mode_norm
 
+
 class LeNet:
     def __init__(self):
         self.raw_input_image = tf.placeholder(tf.float32, [None, 784])
@@ -31,7 +32,7 @@ class LeNet:
                             weights_regularizer=slim.l2_regularizer(0.0005)):
             net = slim.conv2d(self.input_images, 6, [5, 5], 1, padding='SAME', scope='conv1')
             net = slim.max_pool2d(net, [2, 2], scope='pool2')
-            net = mode_norm(net, _lambda=0.1, _k=2)
+            net = mode_norm(net, _lambda=0.99, _k=2)
             net = slim.conv2d(net, 16, [5, 5], 1, scope='conv3')
             net = slim.max_pool2d(net, [2, 2], scope='pool4')
             net = slim.conv2d(net, 120, [5, 5], 1, scope='conv5')

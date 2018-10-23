@@ -19,7 +19,7 @@ def mode_norm(inputs, _lambda, _k, _eps=1e-7):
     variance = xk2_mean - mean ** 2
 
     running_mean = tf.Variable(tf.zeros_like(mean), name='running_mean')
-    running_variance = tf.Variable(tf.zeros_like(variance), name='running_variance')
+    running_variance = tf.Variable(tf.ones_like(variance), name='running_variance')
 
     running_mean = moving_averages.assign_moving_average(running_mean, mean, _lambda, zero_debias=True)
     running_variance = moving_averages.assign_moving_average(running_variance, variance, _lambda, zero_debias=True)
