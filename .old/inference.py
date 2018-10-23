@@ -3,12 +3,12 @@ import tensorflow as tf
 from PIL import Image
 
 import config as cfg
-from lenet import Lenet
+from lenet import LeNet
 
 
 class Inference:
     def __init__(self):
-        self.le_net = Lenet()
+        self.le_net = LeNet()
         self.sess = tf.Session()
         self.parameter_path = cfg.PARAMETER_FILE
         self.saver = tf.train.Saver()

@@ -3,7 +3,7 @@ import tensorflow as tf
 import tensorflow.examples.tutorials.mnist.input_data as input_data
 from glob import glob
 import config as cfg
-from lenet import Lenet
+from lenet import LeNet
 
 
 def main():
@@ -11,7 +11,7 @@ def main():
     sess = tf.Session()
     batch_size = cfg.BATCH_SIZE
     save_path = cfg.PARAMETER_FILE
-    le_net = Lenet()
+    le_net = LeNet()
     max_iter = cfg.MAX_ITER
 
     saver = tf.train.Saver()

@@ -4,22 +4,22 @@ import tensorflow.contrib.slim as slim
 import config as cfg
 
 
-class Lenet:
+class LeNet:
     def __init__(self):
         self.raw_input_image = tf.placeholder(tf.float32, [None, 784])
         self.input_images = tf.reshape(self.raw_input_image, [-1, 28, 28, 1])
-        self.raw_input_label = tf.placeholder("float", [None, 10])
+        self.raw_input_label = tf.placeholder('float', [None, 10])
         self.input_labels = tf.cast(self.raw_input_label, tf.int32)
         self.dropout = cfg.KEEP_PROB
 
-        with tf.variable_scope("Lenet") as scope:
+        with tf.variable_scope('LeNet') as scope:
             self.train_digits = self.construct_net(True)
             scope.reuse_variables()
             self.pred_digits = self.construct_net(False)
 
         self.prediction = tf.argmax(self.pred_digits, 1)
         self.correct_prediction = tf.equal(tf.argmax(self.pred_digits, 1), tf.argmax(self.input_labels, 1))
-        self.train_accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, "float"))
+        self.train_accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, 'float'))
 
         self.loss = slim.losses.softmax_cross_entropy(self.train_digits, self.input_labels)
         self.lr = cfg.LEARNING_RATE
