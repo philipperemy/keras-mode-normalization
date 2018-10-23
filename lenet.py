@@ -15,10 +15,10 @@ class LeNet:
         with tf.variable_scope('LeNet') as scope:
             self.train_digits = self.construct_net(True)
             scope.reuse_variables()
-            self.pred_digits = self.construct_net(False)
+            # self.pred_digits = self.construct_net(False)
 
-        self.prediction = tf.argmax(self.pred_digits, 1)
-        self.correct_prediction = tf.equal(tf.argmax(self.pred_digits, 1), tf.argmax(self.input_labels, 1))
+        self.prediction = tf.argmax(self.train_digits, 1)
+        self.correct_prediction = tf.equal(tf.argmax(self.train_digits, 1), tf.argmax(self.input_labels, 1))
         self.train_accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, 'float'))
 
         self.loss = slim.losses.softmax_cross_entropy(self.train_digits, self.input_labels)

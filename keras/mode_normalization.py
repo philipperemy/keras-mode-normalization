@@ -64,7 +64,7 @@ class ModeNormalization(Layer):
                  beta_constraint=None,
                  gamma_constraint=None,
                  **kwargs):
-        super(BatchNormalization, self).__init__(**kwargs)
+        super(ModeNormalization, self).__init__(**kwargs)
         self.supports_masking = True
         self.axis = axis
         self.momentum = momentum
@@ -214,7 +214,7 @@ class ModeNormalization(Layer):
             'beta_constraint': constraints.serialize(self.beta_constraint),
             'gamma_constraint': constraints.serialize(self.gamma_constraint)
         }
-        base_config = super(BatchNormalization, self).get_config()
+        base_config = super(ModeNormalization, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
     def compute_output_shape(self, input_shape):

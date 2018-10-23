@@ -13,6 +13,8 @@ from keras.layers import Conv2D, MaxPooling2D, BatchNormalization
 from keras.layers import Dense, Dropout, Flatten
 from keras.models import Sequential
 
+from mode_normalization import ModeNormalization
+
 batch_size = 128
 num_classes = 10
 epochs = 12
@@ -51,6 +53,7 @@ model.add(Conv2D(32, kernel_size=(3, 3),
 model.add(Conv2D(64, (3, 3), activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(BatchNormalization())
+model.add(ModeNormalization())
 model.add(Dropout(0.25))
 model.add(Flatten())
 model.add(Dense(128, activation='relu'))
