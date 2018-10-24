@@ -140,6 +140,14 @@ class ModeNormalization(Layer):
             trainable=False)
         self.built = True
 
+    def apply_gates(self, inputs, input_shape):
+        gates = K.dot(Flatten()(inputs), self.gates_kernel)
+        gates = K.bias_add(gates, self.gates_bias, data_format='channels_last')
+        gates = activations.get('softmax')(gates)
+        inputs_mul_gates = K.stack([K.reshape(gates[:, k], [-1] + [1] * (len(input_shape) - 1)) * inputs
+                                    for k in range(self.k)], axis=0)
+        return inputs_mul_gates
+
     def call(self, inputs, training=None):
         input_shape = K.int_shape(inputs)
         # Prepare broadcasting shape.
@@ -148,21 +156,24 @@ class ModeNormalization(Layer):
         del reduction_axes[self.axis]
         broadcast_shape = [1] * len(input_shape)
         broadcast_shape[self.axis] = input_shape[self.axis]
-        # expert_assignments = slim.fully_connected(x, num_outputs=_k, activation_fn=tf.nn.softmax, scope='mode_norm')
-        # Determines whether broadcasting is needed.
         needs_broadcasting = (sorted(reduction_axes) != list(range(ndim))[:-1])
-        # TODO: register this Dense layer somehow.
-        # Those parameters are not under the gradient.
-        # I should probably code a light version of Dense.
-        # dense_gates.build(K.int_shape(inputs_to_gates))
-
-        gates = K.dot(Flatten()(inputs), self.gates_kernel)
-        gates = K.bias_add(gates, self.gates_bias, data_format='channels_last')
-        gates = activations.get('softmax')(gates)
-
-        # gates = Dense(self.k, activation='softmax')(Flatten()(inputs))
 
         def normalize_inference():
+
+            def apply_mode_normalization_inference(moving_mean, moving_variance, beta, gamma):
+                inputs_mul_gates_ = self.apply_gates(inputs, input_shape)
+                outputs = []
+                for k_ in range(self.k):
+                    outputs.append(K.batch_normalization(
+                        inputs_mul_gates_[k_],
+                        moving_mean[k_],
+                        moving_variance[k_],
+                        beta / self.k,
+                        gamma,
+                        axis=self.axis,
+                        epsilon=self.epsilon))
+                return K.sum(K.stack(outputs, axis=0), axis=0)
+
             if needs_broadcasting:
                 # In this case we must explicitly broadcast all parameters.
                 broadcast_moving_mean = K.reshape(self.moving_mean,
@@ -178,36 +189,24 @@ class ModeNormalization(Layer):
                                                 broadcast_shape)
                 else:
                     broadcast_gamma = None
-                return K.batch_normalization(
-                    inputs,
-                    broadcast_moving_mean,
-                    broadcast_moving_variance,
-                    broadcast_beta,
-                    broadcast_gamma,
-                    axis=self.axis,
-                    epsilon=self.epsilon)
+                return apply_mode_normalization_inference(broadcast_moving_mean, broadcast_moving_variance,
+                                                          broadcast_beta, broadcast_gamma)
             else:
-                return K.batch_normalization(
-                    inputs,
-                    self.moving_mean,
-                    self.moving_variance,
-                    self.beta,
-                    self.gamma,
-                    axis=self.axis,
-                    epsilon=self.epsilon)
+                return apply_mode_normalization_inference(self.moving_mean, self.moving_variance,
+                                                          self.beta, self.gamma)
 
         # If the learning phase is *static* and set to inference:
         if training in {0, False}:
             return normalize_inference()
 
-        inputs_mul_gates = K.stack([K.reshape(gates[:, k], [-1] + [1] * (len(input_shape) - 1)) * inputs
-                                    for k in range(self.k)], axis=0)
+        inputs_mul_gates = self.apply_gates(inputs, input_shape)
 
+        # training.
         mean_list, variance_list, normed_training_list = [], [], []
+        norm_func = K.normalize_batch_in_training
         for k in range(self.k):
-            normed_training, mean, variance = K.normalize_batch_in_training(inputs_mul_gates[k],
-                                                                            self.gamma, self.beta / self.k,
-                                                                            reduction_axes, epsilon=self.epsilon)
+            normed_training, mean, variance = norm_func(inputs_mul_gates[k], self.gamma, self.beta / self.k,
+                                                        reduction_axes, epsilon=self.epsilon)
             normed_training_list.append(normed_training)
             mean_list.append(mean)
             variance_list.append(variance)
@@ -234,7 +233,7 @@ class ModeNormalization(Layer):
 
         # Pick the normalized form corresponding to the training phase.
         return K.in_train_phase(normed_training,
-                                normed_training,
+                                normalize_inference,
                                 training=training)
 
     def get_config(self):
