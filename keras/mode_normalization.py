@@ -135,9 +135,13 @@ class ModeNormalization(Layer):
         # expert_assignments = slim.fully_connected(x, num_outputs=_k, activation_fn=tf.nn.softmax, scope='mode_norm')
         # Determines whether broadcasting is needed.
         needs_broadcasting = (sorted(reduction_axes) != list(range(ndim))[:-1])
-        # register this Dense layer somehow.
-        gates = Dense(self.k, activation='softmax')(Flatten()(inputs))
-
+        # TODO: register this Dense layer somehow.
+        # Those parameters are not under the gradient.
+        # I should probably code a light version of Dense.
+        dense_gates = Dense(self.k, activation='softmax')
+        inputs_to_gates = Flatten()(inputs)
+        # dense_gates.build(K.int_shape(inputs_to_gates))
+        gates = dense_gates(Flatten()(inputs))
         gates = K.reshape(gates, (-1, self.k, 1, 1, 1))
 
         mean = K.mean(K.stack([gates[:, k] * inputs for k in range(self.k)], axis=1), axis=0)
