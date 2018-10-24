@@ -94,7 +94,9 @@ class ModeNormalization(Layer):
                              str(input_shape) + '.')
         self.input_spec = InputSpec(ndim=len(input_shape),
                                     axes={self.axis: dim})
-        shape = [self.k] + list(input_shape[1:])
+
+        shape = (dim,)
+        moving_shape = (self.k, dim,)
 
         if self.scale:
             self.gamma = self.add_weight(shape=shape,
@@ -113,12 +115,12 @@ class ModeNormalization(Layer):
         else:
             self.beta = None
         self.moving_mean = self.add_weight(
-            shape=shape,
+            shape=moving_shape,
             name='moving_mean',
             initializer=self.moving_mean_initializer,
             trainable=False)
         self.moving_variance = self.add_weight(
-            shape=shape,
+            shape=moving_shape,
             name='moving_variance',
             initializer=self.moving_variance_initializer,
             trainable=False)
@@ -138,15 +140,8 @@ class ModeNormalization(Layer):
         # TODO: register this Dense layer somehow.
         # Those parameters are not under the gradient.
         # I should probably code a light version of Dense.
-        dense_gates = Dense(self.k, activation='softmax')
-        inputs_to_gates = Flatten()(inputs)
         # dense_gates.build(K.int_shape(inputs_to_gates))
-        gates = dense_gates(Flatten()(inputs))
-        gates = K.reshape(gates, (-1, self.k, 1, 1, 1))
-
-        mean = K.mean(K.stack([gates[:, k] * inputs for k in range(self.k)], axis=1), axis=0)
-        variance = K.mean(K.stack([gates[:, k] * inputs ** 2 for k in range(self.k)], axis=1), axis=0)
-        variance -= mean ** 2
+        gates = Dense(self.k, activation='softmax')(Flatten()(inputs))
 
         def normalize_inference():
             if needs_broadcasting:
@@ -183,36 +178,24 @@ class ModeNormalization(Layer):
                     epsilon=self.epsilon)
 
         # If the learning phase is *static* and set to inference:
-        # if training in {0, False}:
-        #     return normalize_inference()
+        if training in {0, False}:
+            return normalize_inference()
 
-        """
-        outputs = []
-        for k in range(_k):
-            norm_x = tf.nn.batch_normalization(x, mean=running_mean[k], variance=running_variance[k],
-                                               offset=beta, scale=alpha, variance_epsilon=_eps)
-            outputs.append(norm_x)
-        output = tf.add_n(outputs)
-        output = tf.reshape(output, input_shape)
-        """
+        inputs_mul_gates = K.stack([K.reshape(gates[:, k], [-1] + [1] * (len(input_shape) - 1)) * inputs
+                                    for k in range(self.k)], axis=0)
 
-        # Applies batch normalization on x given mean, var, beta and gamma.
-        normed_training_list = []
+        mean_list, variance_list, normed_training_list = [], [], []
         for k in range(self.k):
-            # nt = K.batch_normalization(inputs * gates[:, k],
-            #                            K.reshape(mean[k], [1, 12, 12, 64]),
-            #                            K.reshape(variance[k], [1, 12, 12, 64]),
-            #                            self.beta,
-            #                            self.gamma,
-            #                            axis=self.axis,
-            #                            epsilon=self.epsilon)
-            nt = self.gamma[k] * (inputs * gates[:, k] - mean[k]) / (variance[k] + self.epsilon) + self.beta[k]
-            normed_training_list.append(nt)
-        normed_training = K.sum(K.stack(normed_training_list, axis=0), axis=0)
-        # If the learning is either dynamic, or set to training:
-        # normed_training, mean, variance = K.normalize_batch_in_training(
-        #     inputs, self.gamma, self.beta, reduction_axes,
-        #     epsilon=self.epsilon)
+            normed_training, mean, variance = K.normalize_batch_in_training(inputs_mul_gates[k],
+                                                                            self.gamma, self.beta / self.k,
+                                                                            reduction_axes, epsilon=self.epsilon)
+            normed_training_list.append(normed_training)
+            mean_list.append(mean)
+            variance_list.append(variance)
+
+        mean = K.stack(mean_list, axis=0)
+        variance = K.stack(variance_list, axis=0)
+        normed_training = K.sum(normed_training_list, axis=0)
 
         if K.backend() != 'cntk':
             sample_size = K.prod([K.shape(inputs)[axis]
