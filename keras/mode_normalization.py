@@ -1,7 +1,7 @@
 import keras.backend as K
 from keras import initializers, regularizers, constraints
 from keras.engine import Layer, InputSpec
-from keras.layers import Dense, Flatten
+from keras.layers import activations, Flatten
 from keras.legacy import interfaces
 
 
@@ -98,9 +98,23 @@ class ModeNormalization(Layer):
         shape = (dim,)
         moving_shape = (self.k, dim,)
 
+        mul_shapes = 1
+        for size in input_shape[1:]:
+            mul_shapes *= size
+
+        self.gates_kernel = self.add_weight(shape=(mul_shapes, self.k),
+                                            initializer=initializers.get('glorot_uniform'),
+                                            name='gates_kernel',
+                                            regularizer=None,
+                                            constraint=None)
+
+        self.gates_bias = self.add_weight(shape=(self.k,),
+                                          initializer=initializers.get('zeros'),
+                                          name='gates_bias')
+
         if self.scale:
             self.gamma = self.add_weight(shape=shape,
-                                         name='gamma',
+                                         name='gates_gamma',
                                          initializer=self.gamma_initializer,
                                          regularizer=self.gamma_regularizer,
                                          constraint=self.gamma_constraint)
@@ -108,7 +122,7 @@ class ModeNormalization(Layer):
             self.gamma = None
         if self.center:
             self.beta = self.add_weight(shape=shape,
-                                        name='beta',
+                                        name='gates_beta',
                                         initializer=self.beta_initializer,
                                         regularizer=self.beta_regularizer,
                                         constraint=self.beta_constraint)
@@ -141,7 +155,12 @@ class ModeNormalization(Layer):
         # Those parameters are not under the gradient.
         # I should probably code a light version of Dense.
         # dense_gates.build(K.int_shape(inputs_to_gates))
-        gates = Dense(self.k, activation='softmax')(Flatten()(inputs))
+
+        gates = K.dot(Flatten()(inputs), self.gates_kernel)
+        gates = K.bias_add(gates, self.gates_bias, data_format='channels_last')
+        gates = activations.get('softmax')(gates)
+
+        # gates = Dense(self.k, activation='softmax')(Flatten()(inputs))
 
         def normalize_inference():
             if needs_broadcasting:

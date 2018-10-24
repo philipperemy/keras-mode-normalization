@@ -7,6 +7,7 @@ Gets to 99.25% test accuracy after 12 epochs
 from __future__ import print_function
 
 import keras
+from argparse import ArgumentParser
 from keras import backend as K
 from keras.datasets import mnist
 from keras.layers import Conv2D, MaxPooling2D, BatchNormalization
@@ -14,6 +15,16 @@ from keras.layers import Dense, Dropout, Flatten
 from keras.models import Sequential
 
 from mode_normalization import ModeNormalization
+
+
+def arg_parse():
+    arg_p = ArgumentParser()
+    arg_p.add_argument('--mode_norm', type=str, action='store_true')
+    arg_p.add_argument('--batch_norm', type=str, action='store_true')
+    return arg_p
+
+
+args = arg_parse().parse_args()
 
 batch_size = 128
 num_classes = 10
@@ -52,8 +63,10 @@ model.add(Conv2D(32, kernel_size=(3, 3),
                  input_shape=input_shape))
 model.add(Conv2D(64, (3, 3), activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
-# model.add(BatchNormalization())
-model.add(ModeNormalization(k=2))
+if args.batch_norm:
+    model.add(BatchNormalization())
+if args.mode_norm:
+    model.add(ModeNormalization(k=2))
 model.add(Dropout(0.25))
 model.add(Flatten())
 model.add(Dense(128, activation='relu'))
