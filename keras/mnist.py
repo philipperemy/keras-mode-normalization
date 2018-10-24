@@ -19,8 +19,8 @@ from mode_normalization import ModeNormalization
 
 def arg_parse():
     arg_p = ArgumentParser()
-    arg_p.add_argument('--mode_norm', type=str, action='store_true')
-    arg_p.add_argument('--batch_norm', type=str, action='store_true')
+    arg_p.add_argument('--mode_norm', action='store_true')
+    arg_p.add_argument('--batch_norm', action='store_true')
     return arg_p
 
 
