@@ -1,6 +1,8 @@
 # Mode Normalization (Keras)
 
-`ModeNormalization(axis=-1, k=2, momentum=0.99, epsilon=1e-3, center=True, scale=True, beta_initializer='zeros', gamma_initializer='ones', moving_mean_initializer='zeros', moving_variance_initializer='ones', beta_regularizer=None, gamma_regularizer=None, beta_constraint=None, gamma_constraint=None)`
+```
+ModeNormalization(axis=-1, k=2, momentum=0.99, epsilon=1e-3, center=True, scale=True, beta_initializer='zeros', gamma_initializer='ones', moving_mean_initializer='zeros', moving_variance_initializer='ones', beta_regularizer=None, gamma_regularizer=None, beta_constraint=None, gamma_constraint=None)
+```
 
 Mode Normalization (Lucas Deecke, Iain Murray, Hakan Bilen - 2018) https://arxiv.org/pdf/1810.05466v1.pdf
 
