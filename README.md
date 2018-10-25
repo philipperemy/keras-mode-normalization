@@ -35,11 +35,11 @@ Normalize the activations of the previous layer at each batch,
 - Same shape as input.
 
 ### References
-- [Mode Normalization] https://arxiv.org/pdf/1810.05466v1.pdf
+- [Mode Normalization](https://arxiv.org/pdf/1810.05466v1.pdf)
 
 ## SVHN dataset
 
-https://drive.google.com/file/d/1O4LIHC1ttSeE6HM0haymPeao4nkTFW8y/view?usp=sharing
+- https://drive.google.com/file/d/1O4LIHC1ttSeE6HM0haymPeao4nkTFW8y/view?usp=sharing
 
 ## Run the tests
 
