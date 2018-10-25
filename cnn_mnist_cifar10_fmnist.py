@@ -80,8 +80,8 @@ y_tr_fmnist = y_tr_fmnist + 20
 y_te_cifar10 = y_te_cifar10 + 10
 y_te_fmnist = y_te_fmnist + 20
 
-y_tr_svhn = y_tr_svhn + 30
-y_te_svhn = y_te_svhn + 30
+y_tr_svhn = y_tr_svhn + 29
+y_te_svhn = y_te_svhn + 29
 
 x_train = np.concatenate((x_tr_mnist, x_tr_cifar10, x_tr_fmnist, x_tr_svhn), axis=0)
 y_train = np.concatenate((y_tr_mnist, y_tr_cifar10, y_tr_fmnist, y_tr_svhn), axis=0)
