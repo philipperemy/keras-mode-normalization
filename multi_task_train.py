@@ -10,7 +10,7 @@ import keras
 import numpy as np
 from argparse import ArgumentParser
 from keras.datasets import mnist, cifar10, fashion_mnist
-from keras.layers import Conv2D, MaxPooling2D, BatchNormalization
+from keras.layers import Conv2D, BatchNormalization, AveragePooling2D
 from keras.layers import Dense, Flatten
 from keras.models import Sequential
 
@@ -27,9 +27,9 @@ def arg_parse():
 
 args = arg_parse().parse_args()
 
-batch_size = 256
+batch_size = 128
 num_classes = 40
-epochs = 100
+epochs = 15
 
 # input image dimensions
 img_rows, img_cols = 28, 28
@@ -66,19 +66,21 @@ def get_data(func):
 
 x_tr_svhn = np.mean(x_tr_svhn[:, :28, :28], axis=-1)
 x_te_svhn = np.mean(x_te_svhn[:, :28, :28], axis=-1)
-y_tr_svhn = y_tr_svhn.squeeze()
-y_te_svhn = y_te_svhn.squeeze()
 
 x_tr_cifar10 = np.mean(x_tr_cifar10[:, :28, :28], axis=-1)
 x_te_cifar10 = np.mean(x_te_cifar10[:, :28, :28], axis=-1)
+
+y_tr_svhn = y_tr_svhn.squeeze()
+y_te_svhn = y_te_svhn.squeeze()
+
 y_tr_cifar10 = y_tr_cifar10.squeeze()
 y_te_cifar10 = y_te_cifar10.squeeze()
 
-y_tr_cifar10 = y_tr_cifar10 + 10
 y_tr_fmnist = y_tr_fmnist + 20
-
-y_te_cifar10 = y_te_cifar10 + 10
 y_te_fmnist = y_te_fmnist + 20
+
+y_tr_cifar10 = y_tr_cifar10 + 10
+y_te_cifar10 = y_te_cifar10 + 10
 
 y_tr_svhn = y_tr_svhn + 29
 y_te_svhn = y_te_svhn + 29
@@ -106,26 +108,38 @@ y_test = keras.utils.to_categorical(y_test, num_classes=num_classes)
 
 def add_norm_layer(m):
     if args.batch_norm:
-        m.add(BatchNormalization())
+        m.add(BatchNormalization(momentum=0.9))
     if args.mode_norm:
-        m.add(ModeNormalization(k=2))
+        m.add(ModeNormalization(k=2, momentum=0.9))
 
 
+# LeNet-5 https://github.com/olramde/LeNet-keras
 model = Sequential()
-
-model.add(Conv2D(64, kernel_size=(3, 3),
-                 activation='relu',
-                 input_shape=x_train.shape[1:]))
+model.add(
+    Conv2D(6, kernel_size=(5, 5), strides=(1, 1), activation='tanh', input_shape=x_train.shape[1:], padding="same"))
+model.add(AveragePooling2D(pool_size=(2, 2), strides=(1, 1), padding='valid'))
 add_norm_layer(model)
-model.add(Conv2D(128, (3, 3), activation='relu'))
+model.add(Conv2D(16, kernel_size=(5, 5), strides=(1, 1), activation='tanh', padding='valid'))
+model.add(AveragePooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid'))
 add_norm_layer(model)
-model.add(MaxPooling2D(pool_size=(2, 2)))
-# model.add(Dropout(0.5))
+model.add(Conv2D(120, kernel_size=(5, 5), strides=(1, 1), activation='tanh', padding='valid'))
 model.add(Flatten())
-model.add(Dense(256, activation='relu'))
-# add_norm_layer(model) # TODO does not work here!
-# model.add(Dropout(0.5))
+model.add(Dense(84, activation='tanh'))
 model.add(Dense(num_classes, activation='softmax'))
+
+# model.add(Conv2D(64, kernel_size=(3, 3),
+#                  activation='relu',
+#                  input_shape=x_train.shape[1:]))
+# add_norm_layer(model)
+# model.add(Conv2D(128, (3, 3), activation='relu'))
+# add_norm_layer(model)
+# model.add(MaxPooling2D(pool_size=(2, 2)))
+# # model.add(Dropout(0.5))
+# model.add(Flatten())
+# model.add(Dense(256, activation='relu'))
+# # add_norm_layer(model) # TODO does not work here!
+# # model.add(Dropout(0.5))
+# model.add(Dense(num_classes, activation='softmax'))
 
 model.compile(loss=keras.losses.categorical_crossentropy,
               optimizer=keras.optimizers.Adam(lr=0.001),
