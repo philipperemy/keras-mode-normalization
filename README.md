@@ -11,7 +11,7 @@ Normalize the activations of the previous layer at each batch,
     close to 0 and the activation standard deviation close to 1 for K
     different modes.
     
-# Arguments
+## Arguments
 - **axis**: Integer, the axis that should be normalized (typically the features axis). For instance, after a `Conv2D` layer with `data_format="channels_first"`, set `axis=1` in `ModeNormalization`.
 - **k**: Integer, the number of modes of the normalization.
 - **momentum**: Momentum for the moving mean and the moving variance.
@@ -28,15 +28,21 @@ Normalize the activations of the previous layer at each batch,
 - **gamma_constraint**: Optional constraint for the gamma weight.
 
 
-## Input shape
+### Input shape
 - Arbitrary. Use the keyword argument `input_shape` (tuple of integers, does not include the samples axis) when using this layer as the first layer in a model.
 
-## Output shape
+### Output shape
 - Same shape as input.
 
-## References
+### References
 - [Mode Normalization] https://arxiv.org/pdf/1810.05466v1.pdf
 
 ## SVHN dataset
 
 https://drive.google.com/file/d/1O4LIHC1ttSeE6HM0haymPeao4nkTFW8y/view?usp=sharing
+
+## Run the tests
+
+```
+pytest
+```
