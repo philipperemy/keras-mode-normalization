@@ -10,7 +10,7 @@ class ModeNormalization(Layer):
 
     Normalize the activations of the previous layer at each batch,
     i.e. applies a transformation that maintains the mean activation
-    close to 0 and the activation standard deviation close to 1 for
+    close to 0 and the activation standard deviation close to 1 for K
     different modes.
 
     # Arguments
@@ -47,7 +47,7 @@ class ModeNormalization(Layer):
         Same shape as input.
 
     # References
-        - [Mode Normalization]
+        - [Mode Normalization] https://arxiv.org/pdf/1810.05466v1.pdf
     """
 
     @interfaces.legacy_batchnorm_support
@@ -239,6 +239,7 @@ class ModeNormalization(Layer):
     def get_config(self):
         config = {
             'axis': self.axis,
+            'k': self.k,
             'momentum': self.momentum,
             'epsilon': self.epsilon,
             'center': self.center,
