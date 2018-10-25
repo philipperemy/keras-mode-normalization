@@ -18,7 +18,7 @@ class ModeNormalization(Layer):
             (typically the features axis).
             For instance, after a `Conv2D` layer with
             `data_format="channels_first"`,
-            set `axis=1` in `BatchNormalization`.
+            set `axis=1` in `ModeNormalization`.
         k: Integer, the number of modes of the normalization.
         momentum: Momentum for the moving mean and the moving variance.
         epsilon: Small float added to variance to avoid dividing by zero.
