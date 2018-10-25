@@ -14,6 +14,7 @@ from keras.layers import Conv2D, MaxPooling2D, BatchNormalization
 from keras.layers import Dense, Flatten
 from keras.models import Sequential
 
+import svhn
 from mode_normalization import ModeNormalization
 
 
@@ -27,7 +28,7 @@ def arg_parse():
 args = arg_parse().parse_args()
 
 batch_size = 256
-num_classes = 30
+num_classes = 40
 epochs = 100
 
 # input image dimensions
@@ -61,6 +62,12 @@ def get_data(func):
 (x_tr_mnist, y_tr_mnist), (x_te_mnist, y_te_mnist) = get_data(mnist.load_data)
 (x_tr_cifar10, y_tr_cifar10), (x_te_cifar10, y_te_cifar10) = get_data(cifar10.load_data)
 (x_tr_fmnist, y_tr_fmnist), (x_te_fmnist, y_te_fmnist) = get_data(fashion_mnist.load_data)
+(x_tr_svhn, y_tr_svhn), (x_te_svhn, y_te_svhn) = get_data(svhn.load_data)
+
+x_tr_svhn = np.mean(x_tr_svhn[:, :28, :28], axis=-1)
+x_te_svhn = np.mean(x_te_svhn[:, :28, :28], axis=-1)
+y_tr_svhn = y_tr_svhn.squeeze()
+y_te_svhn = y_te_svhn.squeeze()
 
 x_tr_cifar10 = np.mean(x_tr_cifar10[:, :28, :28], axis=-1)
 x_te_cifar10 = np.mean(x_te_cifar10[:, :28, :28], axis=-1)
@@ -73,11 +80,14 @@ y_tr_fmnist = y_tr_fmnist + 20
 y_te_cifar10 = y_te_cifar10 + 10
 y_te_fmnist = y_te_fmnist + 20
 
-x_train = np.concatenate((x_tr_mnist, x_tr_cifar10, x_tr_fmnist), axis=0)
-y_train = np.concatenate((y_tr_mnist, y_tr_cifar10, y_tr_fmnist), axis=0)
+y_tr_svhn = y_tr_svhn + 30
+y_te_svhn = y_te_svhn + 30
 
-x_test = np.concatenate((x_te_mnist, x_te_cifar10, x_te_fmnist), axis=0)
-y_test = np.concatenate((y_te_mnist, y_te_cifar10, y_te_fmnist), axis=0)
+x_train = np.concatenate((x_tr_mnist, x_tr_cifar10, x_tr_fmnist, x_tr_svhn), axis=0)
+y_train = np.concatenate((y_tr_mnist, y_tr_cifar10, y_tr_fmnist, y_tr_svhn), axis=0)
+
+x_test = np.concatenate((x_te_mnist, x_te_cifar10, x_te_fmnist, x_te_svhn), axis=0)
+y_test = np.concatenate((y_te_mnist, y_te_cifar10, y_te_fmnist, y_te_svhn), axis=0)
 
 x_train = np.expand_dims(x_train, axis=-1)
 x_test = np.expand_dims(x_test, axis=-1)
