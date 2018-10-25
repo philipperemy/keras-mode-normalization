@@ -43,6 +43,4 @@ https://drive.google.com/file/d/1O4LIHC1ttSeE6HM0haymPeao4nkTFW8y/view?usp=shari
 
 ## Run the tests
 
-```
-pytest
-```
+`pytest`
