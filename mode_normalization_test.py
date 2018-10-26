@@ -4,6 +4,7 @@ import numpy as np
 import unittest
 from keras import Input, Model
 from keras.layers import BatchNormalization, Dense, Flatten
+from keras.optimizers import Adam
 from keras.utils.np_utils import to_categorical
 
 from mode_normalization import ModeNormalization
@@ -109,12 +110,24 @@ class ExecutionTest(unittest.TestCase):
         x1 = Flatten()(x1)
         x1 = Dense(2, activation='softmax')(x1)
         m1 = Model(inputs=[i1], outputs=[x1])
-        m1.compile(optimizer='adam', loss='categorical_crossentropy')
-        m1.fit(x_data, y_data, epochs=100, shuffle=True)
+        m1.compile(optimizer=Adam(lr=0.01), loss='categorical_crossentropy')
+        m1.fit(x_data, y_data, epochs=10, shuffle=True)
         p1 = m1.predict(mode2)
 
-        (np.dot(np.reshape(mode1, (-1, 300)), m1.get_weights()[0]) + m1.get_weights()[1]).argmax(axis=1)
-        (np.dot(np.reshape(mode2, (-1, 300)), m1.get_weights()[0]) + m1.get_weights()[1]).argmax(axis=1)
+        def gate_inference(x):
+            return (np.dot(np.reshape(x, (-1, np.prod(x.shape[1:]))), m1.get_weights()[0]) + m1.get_weights()[
+                1]).argmax(axis=1)
+
+        mode1_val = np.mean(gate_inference(mode1))
+        mode2_val = np.mean(gate_inference(mode2))
+
+        # It's possible that in some cases, the network cannot really separate the two modes.
+        # I would say it fails ~5% of the time.
+        if mode1_val < mode2_val:
+            assert mode1_val < 0.3 and mode2_val >= 0.7
+        else:
+            assert mode2_val < 0.3 and mode1_val >= 0.7
+
 
 if __name__ == '__main__':
     ExecutionTest().test_6()
