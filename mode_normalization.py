@@ -1,7 +1,7 @@
 import keras.backend as K
 from keras import initializers, regularizers, constraints
 from keras.engine import Layer, InputSpec
-from keras.layers import activations, Flatten
+from keras.layers import activations
 from keras.legacy import interfaces
 
 
@@ -98,11 +98,7 @@ class ModeNormalization(Layer):
         shape = (dim,)
         moving_shape = (self.k, dim,)
 
-        mul_shapes = 1
-        for size in input_shape[1:]:
-            mul_shapes *= size
-
-        self.gates_kernel = self.add_weight(shape=(mul_shapes, self.k),
+        self.gates_kernel = self.add_weight(shape=(dim, self.k),
                                             initializer=initializers.get('glorot_uniform'),
                                             name='gates_kernel',
                                             regularizer=None,
@@ -140,8 +136,8 @@ class ModeNormalization(Layer):
             trainable=False)
         self.built = True
 
-    def apply_gates(self, inputs, input_shape):
-        gates = K.dot(Flatten()(inputs), self.gates_kernel)
+    def apply_gates(self, inputs, input_shape, axis):
+        gates = K.dot(K.mean(inputs, axis=axis), self.gates_kernel)
         gates = K.bias_add(gates, self.gates_bias, data_format='channels_last')
         gates = activations.get('softmax')(gates)
         inputs_mul_gates = K.stack([K.reshape(gates[:, k], [-1] + [1] * (len(input_shape) - 1)) * inputs
@@ -161,7 +157,7 @@ class ModeNormalization(Layer):
         def normalize_inference():
 
             def apply_mode_normalization_inference(moving_mean, moving_variance, beta, gamma):
-                inputs_mul_gates_ = self.apply_gates(inputs, input_shape)
+                inputs_mul_gates_ = self.apply_gates(inputs, input_shape, reduction_axes[1:])
                 outputs = []
                 for k_ in range(self.k):
                     outputs.append(K.batch_normalization(
@@ -199,7 +195,7 @@ class ModeNormalization(Layer):
         if training in {0, False}:
             return normalize_inference()
 
-        inputs_mul_gates = self.apply_gates(inputs, input_shape)
+        inputs_mul_gates = self.apply_gates(inputs, input_shape, reduction_axes[1:])
 
         # training.
         mean_list, variance_list, normed_training_list = [], [], []

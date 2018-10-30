@@ -1,7 +1,8 @@
 from __future__ import print_function
 
-import numpy as np
 import unittest
+
+import numpy as np
 from keras import Input, Model
 from keras.layers import BatchNormalization, Dense, Flatten
 from keras.optimizers import Adam
@@ -52,7 +53,7 @@ class ExecutionTest(unittest.TestCase):
         m1 = Model(inputs=[i1], outputs=[x1])
 
         weight_shapes = [a.shape for a in m1.get_weights()]
-        assert weight_shapes == [(h * w * num_channels, num_modes),  # gates_kernel
+        assert weight_shapes == [(num_channels, num_modes),  # gates_kernel
                                  (num_modes,),  # gates_bias
                                  (num_channels,),  # gates_gamma
                                  (num_channels,),  # gates_beta
@@ -112,11 +113,9 @@ class ExecutionTest(unittest.TestCase):
         m1 = Model(inputs=[i1], outputs=[x1])
         m1.compile(optimizer=Adam(lr=0.01), loss='categorical_crossentropy')
         m1.fit(x_data, y_data, epochs=10, shuffle=True)
-        p1 = m1.predict(mode2)
 
         def gate_inference(x):
-            return (np.dot(np.reshape(x, (-1, np.prod(x.shape[1:]))), m1.get_weights()[0]) + m1.get_weights()[
-                1]).argmax(axis=1)
+            return (np.dot(np.mean(x, axis=(1, 2)), m1.get_weights()[0]) + m1.get_weights()[1]).argmax(axis=-1)
 
         mode1_val = np.mean(gate_inference(mode1))
         mode2_val = np.mean(gate_inference(mode2))
