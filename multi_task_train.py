@@ -6,9 +6,10 @@ Gets to 99.25% test accuracy after 12 epochs
 
 from __future__ import print_function
 
+from argparse import ArgumentParser
+
 import keras
 import numpy as np
-from argparse import ArgumentParser
 from keras.datasets import mnist, cifar10, fashion_mnist
 from keras.layers import Conv2D, BatchNormalization, AveragePooling2D
 from keras.layers import Dense, Flatten
@@ -117,11 +118,11 @@ def add_norm_layer(m):
 model = Sequential()
 model.add(
     Conv2D(6, kernel_size=(5, 5), strides=(1, 1), activation='tanh', input_shape=x_train.shape[1:], padding="same"))
+add_norm_layer(model)
 model.add(AveragePooling2D(pool_size=(2, 2), strides=(1, 1), padding='valid'))
-add_norm_layer(model)
 model.add(Conv2D(16, kernel_size=(5, 5), strides=(1, 1), activation='tanh', padding='valid'))
-model.add(AveragePooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid'))
 add_norm_layer(model)
+model.add(AveragePooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid'))
 model.add(Conv2D(120, kernel_size=(5, 5), strides=(1, 1), activation='tanh', padding='valid'))
 model.add(Flatten())
 model.add(Dense(84, activation='tanh'))

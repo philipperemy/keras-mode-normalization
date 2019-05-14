@@ -140,8 +140,9 @@ class ModeNormalization(Layer):
         gates = K.dot(K.mean(inputs, axis=axis), self.gates_kernel)
         gates = K.bias_add(gates, self.gates_bias, data_format='channels_last')
         gates = activations.get('softmax')(gates)
-        inputs_mul_gates = K.stack([K.reshape(gates[:, k], [-1] + [1] * (len(input_shape) - 1)) * inputs
-                                    for k in range(self.k)], axis=0)
+        inputs_mul_gates = K.reshape(gates, [-1, self.k] + [1] * (len(input_shape) - 1)) * K.expand_dims(inputs, axis=1)
+        # inputs_mul_gates = K.stack([K.reshape(gates[:, k], [-1] + [1] * (len(input_shape) - 1)) * inputs
+        #                             for k in range(self.k)], axis=0)
         return inputs_mul_gates
 
     def call(self, inputs, training=None):
@@ -161,7 +162,7 @@ class ModeNormalization(Layer):
                 outputs = []
                 for k_ in range(self.k):
                     outputs.append(K.batch_normalization(
-                        inputs_mul_gates_[k_],
+                        inputs_mul_gates_[:, k_],
                         moving_mean[k_],
                         moving_variance[k_],
                         beta / self.k,
@@ -201,7 +202,7 @@ class ModeNormalization(Layer):
         mean_list, variance_list, normed_training_list = [], [], []
         norm_func = K.normalize_batch_in_training
         for k in range(self.k):
-            normed_training, mean, variance = norm_func(inputs_mul_gates[k], self.gamma, self.beta / self.k,
+            normed_training, mean, variance = norm_func(inputs_mul_gates[:, k], self.gamma, self.beta / self.k,
                                                         reduction_axes, epsilon=self.epsilon)
             normed_training_list.append(normed_training)
             mean_list.append(mean)
